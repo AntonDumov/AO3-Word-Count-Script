@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AO3 Word Count Script
 // @namespace    ao3chapterwordcounter
-// @version      3.2
+// @version      3.3
 // @description  Adds word counts to chapter links on AO3 Chapter Index pages.
 // @author       Anton Dumov
 // @license      MIT
@@ -14,7 +14,7 @@
 
     const wordCountRegex = /\s+/g;
     const cacheKeyPrefix = "ao3-word-count-cache-";
-    const cacheDurationMs = 24 * 60 * 60 * 1000;
+    const cacheDurationMs = 30 * 24 * 60 * 60 * 1000;
 
     const getCachedWordCount = link => {
         const cacheKey = cacheKeyPrefix + link.href;
@@ -36,8 +36,23 @@
         localStorage.setItem(cacheKey, cacheValue);
     };
 
+    let fetchInProgress = false;
+
     const fetchWordCount = async (url) => {
         try {
+            if (fetchInProgress) {
+                // Wait for the previous request to complete
+                await new Promise(resolve => {
+                    const interval = setInterval(() => {
+                        if (!fetchInProgress) {
+                            clearInterval(interval);
+                            resolve();
+                        }
+                    }, 2000);
+                });
+            }
+            fetchInProgress = true;
+
             const response = await fetch(url);
             const text = await response.text();
             const parser = new DOMParser();
@@ -45,9 +60,11 @@
             const article = doc.querySelector("div[role=article]");
             const wordCount = article ? article.textContent.trim().split(wordCountRegex).length : 0;
             setCachedWordCount(url, wordCount);
+            fetchInProgress = false;
             return wordCount;
         } catch (error) {
             console.log(error);
+            fetchInProgress = false;
         }
     }
 
