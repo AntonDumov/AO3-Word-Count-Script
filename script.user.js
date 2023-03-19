@@ -86,10 +86,12 @@
 
     const chapterLinks = document.querySelectorAll("ol.chapter.index.group li a");
 
+    const parentWidth = chapterLinks[0].parentElement.getBoundingClientRect().width;
     let maxWidth = 0;
+
     chapterLinks.forEach(link => {
         const width = link.getBoundingClientRect().width;
-        if (width > maxWidth) {
+        if (width > maxWidth && width <= parentWidth) {
             maxWidth = width;
         }
     });
