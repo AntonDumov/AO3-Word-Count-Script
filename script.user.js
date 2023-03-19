@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AO3 Word Count Script
 // @namespace    ao3chapterwordcounter
-// @version      3.3
+// @version      3.4
 // @description  Adds word counts to chapter links on AO3 Chapter Index pages.
 // @author       Anton Dumov
 // @license      MIT
