@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AO3 Word Count Script
 // @namespace    ao3chapterwordcounter
-// @version      3.4
+// @version      3.5
 // @description  Adds word counts to chapter links on AO3 Chapter Index pages.
 // @author       Anton Dumov
 // @license      MIT
@@ -21,7 +21,7 @@
         const cachedValue = localStorage.getItem(cacheKey);
         if (cachedValue) {
             const { timestamp, wordCount } = JSON.parse(cachedValue);
-            if (Date.now() - timestamp < cacheDurationMs) {
+            if (Date.now() - timestamp < cacheDurationMs && wordcount !== 0) {
                 return wordCount;
             } else {
                 localStorage.removeItem(cacheKey);
