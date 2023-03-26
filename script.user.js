@@ -1,18 +1,25 @@
 // ==UserScript==
 // @name         AO3 Word Count Script
 // @namespace    ao3chapterwordcounter
-// @version      3.6
-// @description  Adds word counts to chapter links on AO3 Chapter Index pages.
+// @version      4.0
+// @description  Adds word counts to chapter links on AO3 Chapter Index pages and in Stats on each chapter page.
 // @author       Anton Dumov
 // @license      MIT
 // @match        https://archiveofourown.org/*/navigate
+// @match        https://archiveofourown.org/*/chapters/*
 // @grant        none
 // ==/UserScript==
 
 (function() {
     'use strict';
 
+    const uri = location.protocol+'//'+
+          location.hostname+
+          (location.port?":"+location.port:"")+
+          location.pathname+
+          (location.search?location.search:"");
     const wordCountRegex = /\s+/g;
+    const chapterUrlRegex = new RegExp("https://archiveofourown\\.org/works/\\d+/chapters/\\d+/?");
     const cacheKeyPrefix = "ao3-word-count-cache-";
     const cacheDurationMs = 30 * 24 * 60 * 60 * 1000;
 
@@ -38,6 +45,11 @@
 
     let fetchInProgress = false;
 
+    const countWords = (doc) => {
+        const article = doc.querySelector("div[role=article]");
+        return article ? article.textContent.trim().split(wordCountRegex).length : 0;
+    }
+
     const fetchWordCount = async (url) => {
         try {
             if (fetchInProgress) {
@@ -57,8 +69,7 @@
             const text = await response.text();
             const parser = new DOMParser();
             const doc = parser.parseFromString(text, "text/html");
-            const article = doc.querySelector("div[role=article]");
-            const wordCount = article ? article.textContent.trim().split(wordCountRegex).length : 0;
+            const wordCount = countWords(doc);
             setCachedWordCount(url, wordCount);
             fetchInProgress = false;
             return wordCount;
@@ -68,7 +79,7 @@
         }
     }
 
-    const getWordCount = async (link) => {
+    const getWordCount = async (link, maxWidth) => {
         const cachedWordCount = getCachedWordCount(link);
         let wordCount;
         if (cachedWordCount) {
@@ -84,20 +95,33 @@
         spanElement.parentNode.insertBefore(wordCountElement, spanElement.nextSibling);
     }
 
-    const chapterLinks = document.querySelectorAll("ol.chapter.index.group li a");
+    if (uri.endsWith("navigate")){
+        const chapterLinks = document.querySelectorAll("ol.chapter.index.group li a");
 
-    const parentWidth = chapterLinks[0].parentElement.getBoundingClientRect().width;
-    let maxWidth = 0;
+        const parentWidth = chapterLinks[0].parentElement.getBoundingClientRect().width;
+        let maxWidth = 0;
 
-    chapterLinks.forEach(link => {
-        const width = link.getBoundingClientRect().width;
-        if (width > maxWidth && width <= parentWidth) {
-            maxWidth = width;
-        }
-    });
+        chapterLinks.forEach(link => {
+            const width = link.getBoundingClientRect().width;
+            if (width > maxWidth && width <= parentWidth) {
+                maxWidth = width;
+            }
+        });
 
-    chapterLinks.forEach(link => {
-        getWordCount(link);
-    });
-
+        chapterLinks.forEach(link => {
+            getWordCount(link, maxWidth);
+        });
+    } else if (chapterUrlRegex.test(uri)) {
+        const wordsCount = countWords(document);
+        const statsElement = document.querySelector('dl.stats');
+        const ddElement = document.createElement('dd');
+        ddElement.classList.add('chapter-words');
+        ddElement.textContent = wordsCount;
+        const dtElement = document.createElement('dt');
+        dtElement.classList.add('chapter-words');
+        dtElement.textContent = 'Chapter Words:';
+        statsElement.appendChild(dtElement);
+        statsElement.appendChild(ddElement);
+        setCachedWordCount(uri, wordsCount);
+    }
 })();
