@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AO3 Word Count Script
 // @namespace    ao3chapterwordcounter
-// @version      4.0
+// @version      4.1
 // @description  Adds word counts to chapter links on AO3 Chapter Index pages and in Stats on each chapter page.
 // @author       Anton Dumov
 // @license      MIT
@@ -79,7 +79,7 @@
         }
     }
 
-    const getWordCount = async (link, maxWidth) => {
+    const getWordCount = async (link, maxWidth, longTitles) => {
         const cachedWordCount = getCachedWordCount(link);
         let wordCount;
         if (cachedWordCount) {
@@ -87,12 +87,19 @@
         } else {
             wordCount = await fetchWordCount(link.href);
         }
-        const spanElement = link.parentElement.querySelector('span.datetime');
         const wordCountElement = document.createElement("span");
         wordCountElement.textContent = `(${wordCount} words)`;
-        const margin = maxWidth - link.getBoundingClientRect().width + 7;
-        wordCountElement.style.marginLeft = `${margin}px`;
-        spanElement.parentNode.insertBefore(wordCountElement, spanElement.nextSibling);
+        if (!longTitles){
+            const spanElement = link.parentElement.querySelector('span.datetime');
+            const margin = maxWidth - link.getBoundingClientRect().width + 7;
+            wordCountElement.style.marginLeft = `${margin}px`;
+            spanElement.parentNode.insertBefore(wordCountElement, spanElement.nextSibling);
+        } else {
+            link.parentNode.insertBefore(wordCountElement, link);
+            link.parentElement.style.paddingLeft = `7.5em`
+            wordCountElement.style.position = 'absolute';
+            wordCountElement.style.left = '0';
+        }
     }
 
     if (uri.endsWith("navigate")){
@@ -100,16 +107,20 @@
 
         const parentWidth = chapterLinks[0].parentElement.getBoundingClientRect().width;
         let maxWidth = 0;
+        let longTitles = false;
 
         chapterLinks.forEach(link => {
             const width = link.getBoundingClientRect().width;
-            if (width > maxWidth && width <= parentWidth) {
+            if (width > maxWidth) {
                 maxWidth = width;
+            }
+            if (width + 175 >= parentWidth) {
+                longTitles = true;
             }
         });
 
         chapterLinks.forEach(link => {
-            getWordCount(link, maxWidth);
+            getWordCount(link, maxWidth, longTitles);
         });
     } else if (chapterUrlRegex.test(uri)) {
         const wordsCount = countWords(document);
